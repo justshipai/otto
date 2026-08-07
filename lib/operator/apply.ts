@@ -223,6 +223,14 @@ export async function applyOperations(
         break;
       }
 
+      case 'webSearch':
+      case 'readPage': {
+        // research requests are executed by the operator loop before ops
+        // reach here (lib/operator/research.ts); they never touch the store
+        result.skipped.push('a research request arrived where it could not run');
+        break;
+      }
+
       case 'draftAction': {
         // never applied here — surfaced to the user for approval; the
         // approve endpoint re-validates and applies with an inverse

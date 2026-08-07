@@ -11,10 +11,14 @@ import { z } from 'zod';
  * them so the runtime validation and the static types can never drift apart.
  */
 
-export const viewTypeSchema = z.enum(['table', 'board', 'list']);
+// 'doc' renders records as titled sections — long-form deliverables (a prep
+// document, a briefing) are still just surfaces with records, fully editable
+// and undoable like everything else
+export const viewTypeSchema = z.enum(['table', 'board', 'list', 'doc']);
 export type ViewType = z.infer<typeof viewTypeSchema>;
 
-export const fieldTypeSchema = z.enum(['text', 'number', 'money', 'date', 'status', 'select']);
+// 'longtext' is multi-paragraph prose (doc section bodies, notes)
+export const fieldTypeSchema = z.enum(['text', 'longtext', 'number', 'money', 'date', 'status', 'select']);
 export type FieldType = z.infer<typeof fieldTypeSchema>;
 
 /**

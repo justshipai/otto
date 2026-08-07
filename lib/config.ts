@@ -21,9 +21,25 @@ export const llmConfigSchema = z.object({
 });
 export type LLMConfig = z.infer<typeof llmConfigSchema>;
 
+/**
+ * Web research is OFF by default and opt-in: when enabled, search queries
+ * go to the chosen search provider and requested pages are fetched — the
+ * only network calls Otto makes beyond the model endpoint, and only when
+ * the user asks for research.
+ */
+export const researchConfigSchema = z.object({
+  provider: z.enum(['none', 'brave']),
+  apiKey: z.string().optional(),
+});
+export type ResearchConfig = z.infer<typeof researchConfigSchema>;
+
+export const DEFAULT_RESEARCH_CONFIG: ResearchConfig = { provider: 'none' };
+
 const configFileSchema = z.object({
   llm: llmConfigSchema.partial().optional(),
+  research: researchConfigSchema.partial().optional(),
 });
+type ConfigFile = z.infer<typeof configFileSchema>;
 
 export const DEFAULT_LLM_CONFIG: LLMConfig = {
   provider: 'anthropic',
@@ -39,7 +55,12 @@ const ENV_VARS = {
   baseUrl: 'OTTO_LLM_BASE_URL',
 } as const;
 
-function readConfigFile(): Partial<LLMConfig> {
+const RESEARCH_ENV_VARS = {
+  provider: 'OTTO_SEARCH_PROVIDER',
+  apiKey: 'OTTO_SEARCH_API_KEY',
+} as const;
+
+function readConfigFile(): ConfigFile {
   if (!fs.existsSync(CONFIG_PATH)) {
     return {};
   }
@@ -48,12 +69,17 @@ function readConfigFile(): Partial<LLMConfig> {
     console.warn(`otto: ignoring malformed ${CONFIG_PATH}`);
     return {};
   }
-  return parsed.data.llm ?? {};
+  return parsed.data;
+}
+
+function writeConfigFile(next: ConfigFile): void {
+  fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
+  fs.writeFileSync(CONFIG_PATH, `${JSON.stringify(next, null, 2)}\n`);
 }
 
 /** Effective LLM config: defaults ← config file ← env vars, per field. */
 export function readLLMConfig(): LLMConfig {
-  const file = readConfigFile();
+  const file = readConfigFile().llm ?? {};
   const merged = {
     provider: process.env[ENV_VARS.provider] ?? file.provider ?? DEFAULT_LLM_CONFIG.provider,
     model: process.env[ENV_VARS.model] ?? file.model ?? DEFAULT_LLM_CONFIG.model,
@@ -68,23 +94,53 @@ export function readLLMConfig(): LLMConfig {
   return parsed.data;
 }
 
+/** Effective research config: defaults ← config file ← env vars, per field. */
+export function readResearchConfig(): ResearchConfig {
+  const file = readConfigFile().research ?? {};
+  const merged = {
+    provider: process.env[RESEARCH_ENV_VARS.provider] ?? file.provider ?? DEFAULT_RESEARCH_CONFIG.provider,
+    apiKey: process.env[RESEARCH_ENV_VARS.apiKey] ?? file.apiKey,
+  };
+  const parsed = researchConfigSchema.safeParse(merged);
+  if (!parsed.success) {
+    console.warn('otto: invalid research config, research stays off');
+    return { ...DEFAULT_RESEARCH_CONFIG };
+  }
+  return parsed.data;
+}
+
 /**
- * Persist LLM settings to data/config.json. `apiKey: undefined` keeps any
- * previously saved key; an empty string clears it.
+ * Persist LLM settings to data/config.json, preserving every other section.
+ * `apiKey: undefined` keeps any previously saved key; an empty string clears it.
  */
 export function writeLLMConfig(changes: Partial<LLMConfig>): void {
   const file = readConfigFile();
-  const next: Partial<LLMConfig> = { ...file, ...changes };
+  const next: Partial<LLMConfig> = { ...file.llm, ...changes };
   if (next.apiKey === '') {
     delete next.apiKey;
   }
-  fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
-  fs.writeFileSync(CONFIG_PATH, `${JSON.stringify({ llm: next }, null, 2)}\n`);
+  writeConfigFile({ ...file, llm: next });
+}
+
+/** Persist research settings, preserving every other section. Same key semantics as above. */
+export function writeResearchConfig(changes: Partial<ResearchConfig>): void {
+  const file = readConfigFile();
+  const next: Partial<ResearchConfig> = { ...file.research, ...changes };
+  if (next.apiKey === '') {
+    delete next.apiKey;
+  }
+  writeConfigFile({ ...file, research: next });
 }
 
 /** Which fields are currently pinned by environment variables (shown in Settings). */
 export function envOverriddenFields(): string[] {
   return Object.entries(ENV_VARS)
+    .filter(([, envVar]) => process.env[envVar] !== undefined)
+    .map(([field]) => field);
+}
+
+export function researchEnvOverriddenFields(): string[] {
+  return Object.entries(RESEARCH_ENV_VARS)
     .filter(([, envVar]) => process.env[envVar] !== undefined)
     .map(([field]) => field);
 }

@@ -8,6 +8,11 @@ interface SettingsData {
   baseUrl: string;
   hasApiKey: boolean;
   envOverrides: string[];
+  research: {
+    provider: 'none' | 'brave';
+    hasApiKey: boolean;
+    envOverrides: string[];
+  };
 }
 
 const MODEL_PLACEHOLDERS: Record<SettingsData['provider'], string> = {
@@ -24,6 +29,7 @@ const inputClass =
 export default function SettingsForm() {
   const [settings, setSettings] = useState<SettingsData | undefined>();
   const [apiKey, setApiKey] = useState('');
+  const [searchApiKey, setSearchApiKey] = useState('');
   const [busy, setBusy] = useState<'save' | 'test' | undefined>();
   const [status, setStatus] = useState<{ kind: 'ok' | 'error' | 'info'; text: string } | undefined>();
 
@@ -53,6 +59,10 @@ export default function SettingsForm() {
           baseUrl: settings!.baseUrl,
           // empty string = keep the saved key (the form never displays it)
           ...(apiKey === '' ? {} : { apiKey }),
+          research: {
+            provider: settings!.research.provider,
+            ...(searchApiKey === '' ? {} : { apiKey: searchApiKey }),
+          },
         }),
       });
       const data = await res.json();
@@ -61,8 +71,14 @@ export default function SettingsForm() {
         return false;
       }
       if (apiKey !== '') {
-        setSettings({ ...settings!, hasApiKey: true });
+        setSettings((prev) => (prev ? { ...prev, hasApiKey: true } : prev));
         setApiKey('');
+      }
+      if (searchApiKey !== '') {
+        setSettings((prev) =>
+          prev ? { ...prev, research: { ...prev.research, hasApiKey: true } } : prev,
+        );
+        setSearchApiKey('');
       }
       setStatus({ kind: 'ok', text: 'Saved to data/config.json.' });
       return true;
@@ -165,6 +181,52 @@ export default function SettingsForm() {
           Set by environment variables and not editable here: {settings.envOverrides.join(', ')}
         </p>
       )}
+
+      <div className="mt-2 border-t border-neutral-200 pt-5">
+        <h2 className="text-base font-semibold">Web research</h2>
+        <p className="mt-1 mb-4 text-xs leading-relaxed text-neutral-500">
+          Off by default. When on, and only when you ask Otto to look something up, your search
+          query goes to the provider below and Otto fetches the public pages it finds. Nothing else
+          ever leaves your machine.
+        </p>
+        <div className="flex flex-col gap-5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">Search provider</span>
+            <select
+              className={inputClass}
+              value={settings.research.provider}
+              disabled={settings.research.envOverrides.includes('provider')}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  research: { ...settings.research, provider: e.target.value as 'none' | 'brave' },
+                })
+              }
+            >
+              <option value="none">Off — no web access</option>
+              <option value="brave">Brave Search</option>
+            </select>
+          </label>
+          {settings.research.provider !== 'none' && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">Search API key</span>
+              <input
+                className={inputClass}
+                type="password"
+                value={searchApiKey}
+                disabled={settings.research.envOverrides.includes('apiKey')}
+                placeholder={
+                  settings.research.hasApiKey
+                    ? 'saved — leave blank to keep, type to replace'
+                    : 'paste your key (free tier at brave.com/search/api)'
+                }
+                autoComplete="off"
+                onChange={(e) => setSearchApiKey(e.target.value)}
+              />
+            </label>
+          )}
+        </div>
+      </div>
 
       <div className="flex items-center gap-3">
         <button

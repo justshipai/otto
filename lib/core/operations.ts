@@ -82,6 +82,22 @@ export const createAutomationOpSchema = z.object({
 });
 
 /**
+ * Research request operations: the model asking Otto to look something up.
+ * They NEVER touch the store — the operator executes them (when research is
+ * enabled in Settings), feeds the results back as data, and the model
+ * continues. The model itself can't fetch anything. See lib/operator/research.ts.
+ */
+export const webSearchOpSchema = z.object({
+  op: z.literal('webSearch'),
+  query: z.string().min(1).max(400),
+});
+
+export const readPageOpSchema = z.object({
+  op: z.literal('readPage'),
+  url: z.string().min(1).max(2000),
+});
+
+/**
  * Anything destructive or outbound is never applied directly — the model
  * proposes it as a draft and the user approves or dismisses it in the UI.
  */
@@ -112,6 +128,8 @@ export const operationSchema = z.discriminatedUnion('op', [
   updateRecordOpSchema,
   pinSurfaceOpSchema,
   createAutomationOpSchema,
+  webSearchOpSchema,
+  readPageOpSchema,
   draftActionOpSchema,
   answerOpSchema,
 ]);

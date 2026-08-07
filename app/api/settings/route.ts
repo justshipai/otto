@@ -3,29 +3,42 @@ import {
   envOverriddenFields,
   llmConfigSchema,
   readLLMConfig,
+  readResearchConfig,
+  researchConfigSchema,
+  researchEnvOverriddenFields,
   writeLLMConfig,
+  writeResearchConfig,
 } from '@/lib/config';
 
 /**
- * Read and write the local LLM settings. The API key is write-only through
- * this API: GET reports only whether one is saved, so the key never travels
- * back to the browser.
+ * Read and write the local settings. API keys are write-only through this
+ * API: GET reports only whether one is saved, so keys never travel back to
+ * the browser.
  */
 
 export async function GET() {
-  const config = readLLMConfig();
+  const llm = readLLMConfig();
+  const research = readResearchConfig();
   return Response.json({
-    provider: config.provider,
-    model: config.model,
-    baseUrl: config.baseUrl ?? '',
-    hasApiKey: Boolean(config.apiKey),
+    provider: llm.provider,
+    model: llm.model,
+    baseUrl: llm.baseUrl ?? '',
+    hasApiKey: Boolean(llm.apiKey),
     envOverrides: envOverriddenFields(),
+    research: {
+      provider: research.provider,
+      hasApiKey: Boolean(research.apiKey),
+      envOverrides: researchEnvOverriddenFields(),
+    },
   });
 }
 
 const saveSchema = llmConfigSchema.partial().extend({
   provider: llmConfigSchema.shape.provider,
   model: llmConfigSchema.shape.model,
+  research: researchConfigSchema.partial().extend({
+    provider: researchConfigSchema.shape.provider,
+  }).optional(),
 });
 
 export async function POST(request: Request) {
@@ -33,6 +46,10 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return Response.json({ error: z.prettifyError(parsed.error) }, { status: 400 });
   }
-  writeLLMConfig(parsed.data);
+  const { research, ...llm } = parsed.data;
+  writeLLMConfig(llm);
+  if (research) {
+    writeResearchConfig(research);
+  }
   return Response.json({ ok: true });
 }

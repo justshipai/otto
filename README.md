@@ -84,10 +84,19 @@ Write one file implementing `LLMProvider` (see `lib/llm/provider.ts`), register 
 
 Same idea: the app only talks to the `Store` interface in [`lib/store/store.ts`](lib/store/store.ts). The default adapter is one local SQLite file ([`lib/store/sqlite.ts`](lib/store/sqlite.ts)) — the only file in the repo that contains SQL. A Postgres (or anything else) adapter is one new file wired up in [`lib/store/index.ts`](lib/store/index.ts).
 
+## Web research (off by default)
+
+Ask Otto to look something up — *"I just applied to Murphy AI, scan the web for news and write me a prep doc"* — and, **if you've switched research on in Settings**, it can. The mechanism follows the one rule: the model never fetches anything itself. It emits `webSearch` / `readPage` *request* operations from the same closed, validated set; the operator executes them (bounded rounds, size-capped, public http(s) only — never local or private addresses), feeds the results back as data, and the model's conclusions still have to pass the same schema, approval gates, and undo as everything else. Fetched pages are treated as untrusted input by design.
+
+Long-form results land as a **doc surface** — sections are just records (heading + prose), so a prep doc is editable in place, reshapeable by talking, and undoable like any other surface.
+
+Search goes through the third extension point, `SearchProvider` ([`lib/search/provider.ts`](lib/search/provider.ts)); a Brave Search adapter ships in the box (free-tier key). Adding another engine is one adapter file, like the other two seams.
+
 ## Privacy
 
 - All data stays in `data/` on your machine.
-- Your API key is stored locally and sent only to the model endpoint you configured.
+- Your API keys are stored locally and sent only to the endpoints they belong to.
+- By default the only network calls Otto makes are to the model endpoint you configured. If you enable **web research** in Settings, then — only when you ask Otto to research something — your search query also goes to your chosen search provider, and Otto fetches the public pages it finds.
 - **No telemetry.** If any is ever proposed it must be opt-in and documented here first.
 
 ## Roadmap
@@ -98,7 +107,7 @@ Same idea: the app only talks to the `Store` interface in [`lib/store/store.ts`]
 - [x] **M4** — the operator: natural language → surfaces, end to end
 - [ ] **M5** — reliability pass across multiple providers, incl. local models
 - [x] **M6** — trust layer: approvals, undo, version history
-- [ ] **M6.5** — research: constrained web-search loop (off by default, `SearchProvider` extension point) + long-form `doc` surfaces
+- [x] **M6.5** — research: constrained web-search loop (off by default, `SearchProvider` extension point) + long-form `doc` surfaces
 - [ ] **M7** — automations + proactive "needs attention"
 - [ ] **M8** — first-run experience
 

@@ -17,7 +17,8 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return Response.json({ error: "That change doesn't look right." }, { status: 400 });
   }
-  if (parsed.data.operations.some((op) => op.op === 'draftAction' || op.op === 'answer')) {
+  const NOT_DIRECT = new Set(['draftAction', 'answer', 'webSearch', 'readPage']);
+  if (parsed.data.operations.some((op) => NOT_DIRECT.has(op.op))) {
     return Response.json({ error: 'Only direct data changes can be applied here.' }, { status: 400 });
   }
 
