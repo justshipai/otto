@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import FirstRun from '@/components/FirstRun';
 import SurfaceCard from '@/components/SurfaceCard';
 import { getAttentionItems } from '@/lib/attention';
 import { getStore } from '@/lib/store';
+import { STARTERS } from '@/lib/store/starters';
 import type { Surface, SurfaceRecord } from '@/lib/core/types';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +26,9 @@ function SectionLabel({ children, tone = 'faint' }: { children: React.ReactNode;
 export default async function Home() {
   const store = await getStore();
   const surfaces = await store.listSurfaces();
+  if (surfaces.length === 0) {
+    return <FirstRun chips={STARTERS.map((s) => ({ key: s.key, label: s.chip }))} />;
+  }
   const attention = await getAttentionItems(store);
 
   const counts = new Map<string, SurfaceRecord[]>();
@@ -90,11 +95,6 @@ export default async function Home() {
         </section>
       )}
 
-      {surfaces.length === 0 && (
-        <p className="py-10 text-center text-sm text-faint">
-          Nothing here yet — tell Otto what you&apos;re juggling below.
-        </p>
-      )}
     </div>
   );
 }

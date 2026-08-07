@@ -61,9 +61,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Otto creates `data/otto.db` on first start and seeds a demo surface so you have something to look at. To start fresh, delete the `data/` folder.
+Open http://localhost:3000. Otto asks what you're juggling and offers a few cross-domain examples — pick one and you have a live surface (with its first proactive nudge) before you've configured anything. To start over, delete the `data/` folder.
 
-No API key is needed to browse; you'll add one in Settings (or `.env`, see [`.env.example`](.env.example)) when you want to talk to Otto.
+No API key is needed for that; you'll add one in Settings (or `.env`, see [`.env.example`](.env.example)) when you want to *talk* to Otto.
 
 ## Bring your own model
 
@@ -114,7 +114,7 @@ Search goes through the third extension point, `SearchProvider` ([`lib/search/pr
 - [x] **M6** — trust layer: approvals, undo, version history
 - [x] **M6.5** — research: constrained web-search loop (off by default, `SearchProvider` extension point) + long-form `doc` surfaces
 - [x] **M7** — automations + proactive "needs attention"
-- [ ] **M8** — first-run experience
+- [x] **M8** — first-run experience
 
 Not planned in this repo: code generation (see above), hosted multi-user service, auth, plugin marketplace, real email/SMS sending (outbound actions are stubbed behind an interface a contributor can implement).
 

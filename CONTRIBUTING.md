@@ -25,4 +25,4 @@ Related invariants:
 - Stack: Next.js (App Router) + TypeScript + Tailwind. `npm run dev` runs everything, including the in-process scheduler.
 - Keep modules small and readable; comment the *why*, not the *what*. Strangers read this code — that's the point of it being open source.
 - `npm run lint` and `npm run build` should pass before you open a PR.
-- Delete `data/` any time you want a fresh database + seed.
+- Delete `data/` any time you want a fresh start (the first-run screen with starter chips).

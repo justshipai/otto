@@ -1,5 +1,4 @@
 import path from 'node:path';
-import { seedIfEmpty } from '@/lib/store/seed';
 import { SqliteStore } from '@/lib/store/sqlite';
 import type { Store } from '@/lib/store/store';
 
@@ -17,10 +16,8 @@ const DB_PATH = process.env.OTTO_DB_PATH ?? path.join(process.cwd(), 'data', 'ot
 const globalCache = globalThis as typeof globalThis & { __ottoStore?: Promise<Store> };
 
 export function getStore(): Promise<Store> {
-  globalCache.__ottoStore ??= (async () => {
-    const store: Store = new SqliteStore(DB_PATH);
-    await seedIfEmpty(store);
-    return store;
-  })();
+  // a fresh database starts EMPTY on purpose: Home shows the first-run
+  // question with starter chips (lib/store/starters.ts) instead of seed data
+  globalCache.__ottoStore ??= Promise.resolve(new SqliteStore(DB_PATH));
   return globalCache.__ottoStore;
 }
