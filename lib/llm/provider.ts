@@ -35,6 +35,12 @@ export interface LLMRequest {
    * output use it natively; plain-text adapters embed it in the prompt.
    */
   operationsJsonSchema: Record<string, unknown>;
+  /**
+   * When true (research mode "model"), the adapter should let the model use
+   * its provider's built-in web search if one exists. Best effort: adapters
+   * for providers without native search simply ignore this — never fake it.
+   */
+  nativeWebSearch?: boolean;
 }
 
 export interface LLMProvider {

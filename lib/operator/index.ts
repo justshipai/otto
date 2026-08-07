@@ -51,7 +51,7 @@ export async function runOperator(
     surfaces.map(async (surface) => ({ surface, records: await store.listRecords(surface.id) })),
   );
 
-  const system = buildSystemPrompt(workspace, new Date().toISOString().slice(0, 10), research.enabled);
+  const system = buildSystemPrompt(workspace, new Date().toISOString().slice(0, 10), research.mode);
   const schema = operationListJsonSchema();
   // prior turns give the model conversational memory ("add one more",
   // "actually make it a board"); the workspace snapshot alone can't
@@ -60,7 +60,12 @@ export async function runOperator(
   let operations: Operation[] = [];
   let fallback = false;
   for (let round = 0; ; round += 1) {
-    const attempt = await requestOperations(provider, { system, messages, operationsJsonSchema: schema });
+    const attempt = await requestOperations(provider, {
+      system,
+      messages,
+      operationsJsonSchema: schema,
+      nativeWebSearch: research.mode === 'model',
+    });
     operations = attempt.operations;
     fallback = attempt.fallback;
 

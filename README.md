@@ -86,7 +86,12 @@ Same idea: the app only talks to the `Store` interface in [`lib/store/store.ts`]
 
 ## Web research (off by default)
 
-Ask Otto to look something up — *"I just applied to Murphy AI, scan the web for news and write me a prep doc"* — and, **if you've switched research on in Settings**, it can. The mechanism follows the one rule: the model never fetches anything itself. It emits `webSearch` / `readPage` *request* operations from the same closed, validated set; the operator executes them (bounded rounds, size-capped, public http(s) only — never local or private addresses), feeds the results back as data, and the model's conclusions still have to pass the same schema, approval gates, and undo as everything else. Fetched pages are treated as untrusted input by design.
+Ask Otto to look something up — *"I just applied to Murphy AI, scan the web for news and write me a prep doc"* — and, **if you've switched research on in Settings**, it can. Two modes:
+
+- **My model's built-in search (no extra key).** Searching happens at your model provider, inside the completion itself — Anthropic's `web_search` tool, OpenAI's search-capable models, Perplexity, OpenRouter `:online` models. No new vendor sees anything your model provider didn't already see. (Local models can't do this.)
+- **Brave Search (works with any model, including local ones).** The model emits `webSearch` / `readPage` *request* operations from the same closed, validated set; the operator executes them (bounded rounds, size-capped, public http(s) only — never local or private addresses) and feeds the results back as data. Needs a free Brave key.
+
+Either way the one rule holds: however the facts get in, the model's conclusions still have to pass the same schema, approval gates, and undo as everything else. Web content is treated as untrusted input by design.
 
 Long-form results land as a **doc surface** — sections are just records (heading + prose), so a prep doc is editable in place, reshapeable by talking, and undoable like any other surface.
 

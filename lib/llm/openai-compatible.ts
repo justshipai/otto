@@ -44,15 +44,41 @@ export class OpenAICompatibleProvider implements LLMProvider {
     }
 
     const url = `${this.#config.baseUrl.replace(/\/$/, '')}/chat/completions`;
-    const response = await fetch(url, {
+    const payload: Record<string, unknown> = {
+      model: this.#config.model,
+      messages: [{ role: 'system', content: system }, ...request.messages],
+    };
+
+    // native search is best effort across the OpenAI-compatible world:
+    // OpenAI's search-capable models accept web_search_options; providers
+    // that search on their own (Perplexity, OpenRouter ':online') need
+    // nothing; servers that reject the parameter get one clean retry
+    // without it, so enabling the setting never breaks a provider
+    if (request.nativeWebSearch) {
+      payload.web_search_options = {};
+    }
+
+    let response = await fetch(url, {
       method: 'POST',
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers,
-      body: JSON.stringify({
-        model: this.#config.model,
-        messages: [{ role: 'system', content: system }, ...request.messages],
-      }),
+      body: JSON.stringify(payload),
     });
+
+    if (!response.ok && request.nativeWebSearch && response.status >= 400 && response.status < 500) {
+      const errorBody = await response.text();
+      if (/web_search/i.test(errorBody)) {
+        delete payload.web_search_options;
+        response = await fetch(url, {
+          method: 'POST',
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+          headers,
+          body: JSON.stringify(payload),
+        });
+      } else {
+        throw new Error(`${url} returned ${response.status}: ${errorBody.slice(0, 300)}`);
+      }
+    }
 
     if (!response.ok) {
       const body = await response.text();

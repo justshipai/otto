@@ -22,13 +22,16 @@ export const llmConfigSchema = z.object({
 export type LLMConfig = z.infer<typeof llmConfigSchema>;
 
 /**
- * Web research is OFF by default and opt-in: when enabled, search queries
- * go to the chosen search provider and requested pages are fetched — the
- * only network calls Otto makes beyond the model endpoint, and only when
- * the user asks for research.
+ * Web research is OFF by default and opt-in.
+ * - 'model': the LLM's own built-in search (Anthropic's web_search tool,
+ *   OpenAI's search-capable models, Perplexity, OpenRouter ':online', …).
+ *   No extra key or vendor — searching happens at the model provider, which
+ *   already sees the conversation. Local models can't do this.
+ * - 'brave': Otto searches and fetches pages itself via the SearchProvider
+ *   seam — works with ANY model, including local ones. Needs a Brave key.
  */
 export const researchConfigSchema = z.object({
-  provider: z.enum(['none', 'brave']),
+  provider: z.enum(['none', 'model', 'brave']),
   apiKey: z.string().optional(),
 });
 export type ResearchConfig = z.infer<typeof researchConfigSchema>;

@@ -9,7 +9,7 @@ interface SettingsData {
   hasApiKey: boolean;
   envOverrides: string[];
   research: {
-    provider: 'none' | 'brave';
+    provider: 'none' | 'model' | 'brave';
     hasApiKey: boolean;
     envOverrides: string[];
   };
@@ -185,9 +185,10 @@ export default function SettingsForm() {
       <div className="mt-2 border-t border-neutral-200 pt-5">
         <h2 className="text-base font-semibold">Web research</h2>
         <p className="mt-1 mb-4 text-xs leading-relaxed text-neutral-500">
-          Off by default. When on, and only when you ask Otto to look something up, your search
-          query goes to the provider below and Otto fetches the public pages it finds. Nothing else
-          ever leaves your machine.
+          Off by default. &ldquo;My model&rdquo; needs no extra key — searching happens at your model
+          provider (works with Claude, OpenAI&rsquo;s search-capable models, Perplexity, OpenRouter
+          &lsquo;:online&rsquo; models; local models can&rsquo;t). Brave works with any model,
+          including local ones: your query goes to Brave and Otto fetches the public pages it finds.
         </p>
         <div className="flex flex-col gap-5">
           <label className="flex flex-col gap-1.5">
@@ -199,15 +200,19 @@ export default function SettingsForm() {
               onChange={(e) =>
                 setSettings({
                   ...settings,
-                  research: { ...settings.research, provider: e.target.value as 'none' | 'brave' },
+                  research: {
+                    ...settings.research,
+                    provider: e.target.value as 'none' | 'model' | 'brave',
+                  },
                 })
               }
             >
               <option value="none">Off — no web access</option>
-              <option value="brave">Brave Search</option>
+              <option value="model">My model&rsquo;s built-in search (no extra key)</option>
+              <option value="brave">Brave Search (separate free key)</option>
             </select>
           </label>
-          {settings.research.provider !== 'none' && (
+          {settings.research.provider === 'brave' && (
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">Search API key</span>
               <input

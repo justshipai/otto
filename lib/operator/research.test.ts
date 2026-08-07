@@ -23,7 +23,7 @@ function scriptedProvider(...responses: string[]): LLMProvider {
 function fakeExecutor(results: Record<string, string>): ResearchExecutor & { calls: ResearchOp[] } {
   const calls: ResearchOp[] = [];
   return {
-    enabled: true,
+    mode: 'brave',
     calls,
     async execute(op) {
       calls.push(op);
@@ -114,7 +114,7 @@ describe('research loop', () => {
 
   it('refuses politely when research is disabled', async () => {
     const disabled: ResearchExecutor = {
-      enabled: false,
+      mode: 'none',
       execute: async () => 'Research is switched off in Settings, so this request was not run.',
     };
     const provider = scriptedProvider(
