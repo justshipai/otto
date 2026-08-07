@@ -50,6 +50,7 @@ const SCHEMA = `
 
   CREATE TABLE IF NOT EXISTS change_log (
     id TEXT PRIMARY KEY,
+    batch_id TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     summary TEXT NOT NULL,
     operation_json TEXT NOT NULL,
@@ -89,6 +90,7 @@ interface AutomationRow {
 
 interface ChangeLogRow {
   id: string;
+  batch_id: string;
   created_at: string;
   summary: string;
   operation_json: string;
@@ -134,6 +136,7 @@ function rowToAutomation(row: AutomationRow): Automation {
 function rowToChange(row: ChangeLogRow): ChangeLogEntry {
   return {
     id: row.id,
+    batchId: row.batch_id,
     createdAt: row.created_at,
     summary: row.summary,
     operation: JSON.parse(row.operation_json),
@@ -150,6 +153,20 @@ export class SqliteStore implements Store {
     this.#db.pragma('journal_mode = WAL');
     this.#db.pragma('foreign_keys = ON');
     this.#db.exec(SCHEMA);
+    this.#addColumnIfMissing('change_log', 'batch_id', "TEXT NOT NULL DEFAULT ''");
+    // entries from before batches existed each become their own batch —
+    // NEVER one shared batch, or a single undo would replay all of history
+    this.#db.exec("UPDATE change_log SET batch_id = id WHERE batch_id = ''");
+    // created here, after the migration, so it works on pre-batch databases
+    this.#db.exec('CREATE INDEX IF NOT EXISTS idx_change_log_batch ON change_log(batch_id)');
+  }
+
+  // minimal forward-migration for databases created before a column existed
+  #addColumnIfMissing(table: string, column: string, definition: string) {
+    const columns = this.#db.pragma(`table_info(${table})`) as { name: string }[];
+    if (!columns.some((c) => c.name === column)) {
+      this.#db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
   }
 
   async listSurfaces(): Promise<Surface[]> {
@@ -330,11 +347,12 @@ export class SqliteStore implements Store {
   async appendChange(entry: ChangeLogEntry): Promise<void> {
     this.#db
       .prepare(
-        `INSERT INTO change_log (id, created_at, summary, operation_json, inverse_json)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO change_log (id, batch_id, created_at, summary, operation_json, inverse_json)
+         VALUES (?, ?, ?, ?, ?, ?)`,
       )
       .run(
         entry.id,
+        entry.batchId,
         entry.createdAt,
         entry.summary,
         JSON.stringify(entry.operation),
@@ -343,9 +361,17 @@ export class SqliteStore implements Store {
   }
 
   async listChanges(limit = 50): Promise<ChangeLogEntry[]> {
+    // rowid, not created_at: entries in one batch can share a timestamp
     const rows = this.#db
-      .prepare('SELECT * FROM change_log ORDER BY created_at DESC LIMIT ?')
+      .prepare('SELECT * FROM change_log ORDER BY rowid DESC LIMIT ?')
       .all(limit) as ChangeLogRow[];
+    return rows.map(rowToChange);
+  }
+
+  async listBatchChanges(batchId: string): Promise<ChangeLogEntry[]> {
+    const rows = this.#db
+      .prepare('SELECT * FROM change_log WHERE batch_id = ? ORDER BY rowid ASC')
+      .all(batchId) as ChangeLogRow[];
     return rows.map(rowToChange);
   }
 }

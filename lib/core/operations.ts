@@ -96,6 +96,8 @@ export const answerOpSchema = z.object({
   text: z.string().min(1),
 });
 
+export type DraftActionOp = z.infer<typeof draftActionOpSchema>;
+
 export const operationSchema = z.discriminatedUnion('op', [
   createSurfaceOpSchema,
   addFieldOpSchema,
@@ -141,13 +143,19 @@ export type InverseOperation =
  * One entry in the append-only change log. Every mutation Otto applies is
  * recorded here with its inverse, which is what makes "trust through
  * visibility and undo" possible. Entries are never updated or deleted;
- * undo appends a new entry that applies the inverse.
+ * undo appends a new batch of entries that apply the inverses — so an
+ * undo is itself undoable.
+ *
+ * `operation` is a model Operation for normal entries; for undo entries it
+ * is the InverseOperation that was replayed.
  */
 export interface ChangeLogEntry {
   id: string;
+  // one batch per operator run / approved draft / undo; Undo acts on whole batches
+  batchId: string;
   createdAt: string;
   // plain-language, user-facing, e.g. "Added Acme Co to Clients who owe me money"
   summary: string;
-  operation: Operation;
+  operation: Operation | InverseOperation;
   inverse: InverseOperation;
 }

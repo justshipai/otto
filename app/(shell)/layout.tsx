@@ -13,9 +13,14 @@ export default function ShellLayout({ children }: LayoutProps<'/'>) {
           <span className="text-xl font-bold tracking-tight">Otto</span>
           <span className="text-lg text-faint">your operator</span>
         </Link>
-        <Link href="/settings" className="text-sm text-faint hover:text-ink">
-          Settings
-        </Link>
+        <span className="flex items-center gap-4">
+          <Link href="/history" className="text-sm text-faint hover:text-ink">
+            History
+          </Link>
+          <Link href="/settings" className="text-sm text-faint hover:text-ink">
+            Settings
+          </Link>
+        </span>
       </header>
       <AppNav />
       <div className="flex-1 border-t border-line py-6">{children}</div>

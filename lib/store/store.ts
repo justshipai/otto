@@ -43,5 +43,8 @@ export interface Store {
 
   // change log (append-only)
   appendChange(entry: ChangeLogEntry): Promise<void>;
+  /** newest first */
   listChanges(limit?: number): Promise<ChangeLogEntry[]>;
+  /** one batch, in the order its entries were applied — undo replays this reversed */
+  listBatchChanges(batchId: string): Promise<ChangeLogEntry[]>;
 }

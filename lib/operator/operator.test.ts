@@ -147,6 +147,7 @@ describe('runOperator', () => {
     );
 
     expect(result.appliedCount).toBe(0);
-    expect(result.reply).toContain('needs your approval');
+    expect(result.drafts).toHaveLength(1);
+    expect(result.drafts[0].kind).toBe('deleteSurface');
   });
 });

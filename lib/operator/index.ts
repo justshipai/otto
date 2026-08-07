@@ -1,4 +1,4 @@
-import { operationListJsonSchema, type Operation } from '@/lib/core/operations';
+import { operationListJsonSchema, type DraftActionOp, type Operation } from '@/lib/core/operations';
 import { requestOperations } from '@/lib/llm/validate';
 import { applyOperations } from '@/lib/operator/apply';
 import { buildSystemPrompt, type WorkspaceSurface } from '@/lib/operator/prompt';
@@ -16,6 +16,10 @@ export interface OperatorResult {
   reply: string;
   createdSurfaceIds: string[];
   appliedCount: number;
+  /** the batch every applied change was logged under — what Undo targets */
+  batchId: string;
+  /** proposed destructive/outbound actions awaiting approval */
+  drafts: DraftActionOp[];
   /** the validated operations, so the client can carry them as conversation history */
   operations: Operation[];
   /** true when the model couldn't produce valid operations and we fell back to asking the user to rephrase */
@@ -41,17 +45,23 @@ export async function runOperator(
     operationsJsonSchema: operationListJsonSchema(),
   });
 
-  const applied = await applyOperations(store, operations);
+  const batchId = crypto.randomUUID();
+  const applied = await applyOperations(store, operations, batchId);
 
   const replyLines = [...applied.replyParts];
   if (applied.skipped.length > 0) {
     replyLines.push(`I held off on some of it: ${applied.skipped.join('; ')}.`);
+  }
+  if (applied.drafts.length > 0 && replyLines.length === 0) {
+    replyLines.push('Here’s what I’d like to do — it needs your say-so first.');
   }
 
   return {
     reply: replyLines.join('\n') || 'Done.',
     createdSurfaceIds: applied.createdSurfaceIds,
     appliedCount: applied.appliedCount,
+    batchId,
+    drafts: applied.drafts,
     operations,
     fallback,
   };

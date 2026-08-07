@@ -1,4 +1,4 @@
-import type { InverseOperation, Operation } from '@/lib/core/operations';
+import type { DraftActionOp, InverseOperation, Operation } from '@/lib/core/operations';
 import type { Automation, Surface, SurfaceRecord } from '@/lib/core/types';
 import type { Store } from '@/lib/store/store';
 
@@ -17,7 +17,9 @@ export interface ApplyResult {
   replyParts: string[];
   createdSurfaceIds: string[];
   appliedCount: number;
-  /** ops we understood but chose not to apply (drafts) or couldn't target */
+  /** proposed destructive/outbound actions awaiting the user's approval */
+  drafts: DraftActionOp[];
+  /** ops we understood but couldn't target */
   skipped: string[];
 }
 
@@ -34,16 +36,27 @@ function resolveSurface(
   );
 }
 
-export async function applyOperations(store: Store, operations: Operation[]): Promise<ApplyResult> {
+export async function applyOperations(
+  store: Store,
+  operations: Operation[],
+  batchId: string,
+): Promise<ApplyResult> {
   const surfaces = await store.listSurfaces();
   const createdThisBatch = new Map<string, Surface>();
-  const result: ApplyResult = { replyParts: [], createdSurfaceIds: [], appliedCount: 0, skipped: [] };
+  const result: ApplyResult = {
+    replyParts: [],
+    createdSurfaceIds: [],
+    appliedCount: 0,
+    drafts: [],
+    skipped: [],
+  };
   let recordsAddedTo: Surface | undefined;
   let recordsAdded = 0;
 
   async function log(summary: string, operation: Operation, inverse: InverseOperation) {
     await store.appendChange({
       id: crypto.randomUUID(),
+      batchId,
       createdAt: new Date().toISOString(),
       summary,
       operation,
@@ -190,8 +203,9 @@ export async function applyOperations(store: Store, operations: Operation[]): Pr
       }
 
       case 'draftAction': {
-        // never applied without approval; the approval sheet lands in milestone 6
-        result.skipped.push(`${op.description} — that needs your approval, which arrives in an upcoming update`);
+        // never applied here — surfaced to the user for approval; the
+        // approve endpoint re-validates and applies with an inverse
+        result.drafts.push(op);
         break;
       }
     }

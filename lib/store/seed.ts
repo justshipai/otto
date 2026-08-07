@@ -98,6 +98,7 @@ export async function seedIfEmpty(store: Store): Promise<void> {
   }
 
   const base = Date.now();
+  const seedBatchId = crypto.randomUUID();
   for (const [index, seed] of SEED.entries()) {
     // stagger timestamps so creation order (Library) and recency (Home) are stable
     const iso = new Date(base + index * 1000).toISOString();
@@ -123,6 +124,7 @@ export async function seedIfEmpty(store: Store): Promise<void> {
     }
     await store.appendChange({
       id: crypto.randomUUID(),
+      batchId: seedBatchId,
       createdAt: iso,
       summary: `Set up "${seed.title}" with ${seed.rows.length} items (demo data)`,
       operation: {

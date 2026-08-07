@@ -4,10 +4,20 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+interface Draft {
+  op: 'draftAction';
+  kind: 'sendMessage' | 'deleteRecord' | 'deleteSurface';
+  description: string;
+  payload: Record<string, string | number | null>;
+}
+
 interface OperatorResponse {
   reply?: string;
   createdSurfaceIds?: string[];
   operations?: unknown[];
+  appliedCount?: number;
+  batchId?: string;
+  drafts?: Draft[];
   error?: string;
 }
 
@@ -22,7 +32,8 @@ const MAX_HISTORY_TURNS = 12;
 /**
  * The persistent "Summon" composer — Otto's main input. Describing a need
  * here reshapes the app in place: the message goes to the operator, the
- * reply is shown, and the pages re-read fresh data.
+ * reply is shown with an Undo for what was applied, and anything
+ * destructive or outbound waits below as a draft until it's approved.
  *
  * It also carries the conversation: recent turns are kept here (the
  * composer stays mounted across navigation) and sent with each request, so
@@ -36,6 +47,8 @@ export default function Composer() {
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<HistoryTurn[]>([]);
   const [note, setNote] = useState<{ kind: 'reply' | 'error'; text: string } | undefined>();
+  const [undoableBatch, setUndoableBatch] = useState<string | undefined>();
+  const [drafts, setDrafts] = useState<Draft[]>([]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,6 +58,8 @@ export default function Composer() {
     }
     setBusy(true);
     setNote(undefined);
+    setDrafts([]);
+    setUndoableBatch(undefined);
     try {
       const res = await fetch('/api/operator', {
         method: 'POST',
@@ -67,11 +82,72 @@ export default function Composer() {
         ].slice(-MAX_HISTORY_TURNS),
       );
       setNote({ kind: 'reply', text: data.reply ?? 'Done.' });
+      setDrafts(data.drafts ?? []);
+      if ((data.appliedCount ?? 0) > 0 && data.batchId) {
+        setUndoableBatch(data.batchId);
+      }
       setValue('');
       const created = data.createdSurfaceIds?.[0];
       if (created) {
         router.push(`/surface/${created}`);
       }
+      router.refresh();
+    } catch {
+      setNote({ kind: 'error', text: 'Could not reach Otto. Is the server still running?' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function undo() {
+    if (!undoableBatch || busy) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/undo', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ batchId: undoableBatch }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setNote({ kind: 'error', text: data.error ?? 'Could not undo that.' });
+        return;
+      }
+      setNote({ kind: 'reply', text: 'Undone — everything is back the way it was.' });
+      setUndoableBatch(undefined);
+      router.refresh();
+    } catch {
+      setNote({ kind: 'error', text: 'Could not reach Otto. Is the server still running?' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resolveDraft(draft: Draft, approved: boolean) {
+    if (busy) {
+      return;
+    }
+    if (!approved) {
+      setDrafts((prev) => prev.filter((d) => d !== draft));
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/operator/apply-draft', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ draft }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setNote({ kind: 'error', text: data.error ?? 'Could not apply that.' });
+        return;
+      }
+      setNote({ kind: 'reply', text: data.reply ?? 'Done.' });
+      setUndoableBatch(draft.kind === 'sendMessage' ? undefined : data.batchId);
+      setDrafts((prev) => prev.filter((d) => d !== draft));
       router.refresh();
     } catch {
       setNote({ kind: 'error', text: 'Could not reach Otto. Is the server still running?' });
@@ -96,7 +172,7 @@ export default function Composer() {
           <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md bg-accent text-[10px] font-bold text-white">
             O
           </span>
-          <span>
+          <span className="flex-1">
             {note.text}
             {note.kind === 'error' && note.text.includes('Settings') && (
               <>
@@ -107,8 +183,44 @@ export default function Composer() {
               </>
             )}
           </span>
+          {note.kind === 'reply' && undoableBatch && (
+            <button
+              onClick={undo}
+              disabled={busy}
+              className="shrink-0 rounded-full border border-line px-3 py-1 text-xs font-semibold text-faint hover:text-ink disabled:opacity-50"
+            >
+              Undo
+            </button>
+          )}
         </div>
       )}
+      {drafts.map((draft, index) => (
+        <div
+          key={index}
+          className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-attention-line bg-attention-bg px-4 py-3"
+        >
+          <p className="text-sm text-attention-ink">
+            <span className="font-semibold">Needs your OK: </span>
+            {draft.description}
+          </p>
+          <span className="flex shrink-0 gap-2">
+            <button
+              onClick={() => resolveDraft(draft, false)}
+              disabled={busy}
+              className="rounded-full border border-attention-line px-3.5 py-1.5 text-xs font-semibold text-attention-ink hover:bg-attention-line/40 disabled:opacity-50"
+            >
+              Dismiss
+            </button>
+            <button
+              onClick={() => resolveDraft(draft, true)}
+              disabled={busy}
+              className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-accent-deep disabled:opacity-50"
+            >
+              Approve
+            </button>
+          </span>
+        </div>
+      ))}
       <form onSubmit={submit} className="flex items-center gap-2.5">
         <input
           className="w-full rounded-full border border-line bg-card px-5 py-3 text-sm placeholder-faint focus:border-faint focus:outline-none disabled:opacity-60"
