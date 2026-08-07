@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getStore } from '@/lib/store';
 import type { Field, FieldValue } from '@/lib/core/types';
 
@@ -33,9 +34,14 @@ export default async function Home() {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
-      <p className="mb-8 text-sm text-neutral-400">
-        Otto · milestone 1 — temporary proof page (data read from data/otto.db via the Store
-        interface)
+      <p className="mb-8 flex items-center justify-between text-sm text-neutral-400">
+        <span>
+          Otto · milestone 2 — temporary proof page (data read from data/otto.db via the Store
+          interface)
+        </span>
+        <Link href="/settings" className="hover:text-neutral-600">
+          Settings →
+        </Link>
       </p>
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">
         <span className="mr-2">{surface.icon}</span>
