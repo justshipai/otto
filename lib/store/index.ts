@@ -1,0 +1,26 @@
+import path from 'node:path';
+import { seedIfEmpty } from '@/lib/store/seed';
+import { SqliteStore } from '@/lib/store/sqlite';
+import type { Store } from '@/lib/store/store';
+
+/**
+ * The one place a concrete Store adapter is chosen. Everything else in the
+ * app calls getStore() and sees only the Store interface.
+ *
+ * To use a different backend, construct your adapter here (ideally switched
+ * on config/env) — no other file needs to change.
+ */
+
+const DB_PATH = process.env.OTTO_DB_PATH ?? path.join(process.cwd(), 'data', 'otto.db');
+
+// cached on globalThis so Next.js dev-mode hot reloads reuse one connection
+const globalCache = globalThis as typeof globalThis & { __ottoStore?: Promise<Store> };
+
+export function getStore(): Promise<Store> {
+  globalCache.__ottoStore ??= (async () => {
+    const store: Store = new SqliteStore(DB_PATH);
+    await seedIfEmpty(store);
+    return store;
+  })();
+  return globalCache.__ottoStore;
+}
