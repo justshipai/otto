@@ -177,6 +177,27 @@ export async function applyOperations(
         break;
       }
 
+      case 'pinSurface': {
+        const surface = resolveSurface(op.surface, surfaces, createdThisBatch);
+        if (!surface) {
+          result.skipped.push(`couldn't find a surface called "${op.surface}"`);
+          break;
+        }
+        const previousPinned = surface.pinned;
+        if (previousPinned === op.pinned) {
+          break;
+        }
+        surface.pinned = op.pinned;
+        await store.updateSurface(surface.id, { pinned: op.pinned, updatedAt: now });
+        result.replyParts.push(`${op.pinned ? 'Pinned' : 'Unpinned'} "${surface.title}".`);
+        await log(`${op.pinned ? 'Pinned' : 'Unpinned'} "${surface.title}"`, op, {
+          op: 'restorePinned',
+          surfaceId: surface.id,
+          pinned: previousPinned,
+        });
+        break;
+      }
+
       case 'createAutomation': {
         const surface = resolveSurface(op.surface, surfaces, createdThisBatch);
         if (!surface) {

@@ -67,6 +67,12 @@ export const updateRecordOpSchema = z.object({
   values: recordValuesSchema,
 });
 
+export const pinSurfaceOpSchema = z.object({
+  op: z.literal('pinSurface'),
+  surface: z.string().min(1),
+  pinned: z.boolean(),
+});
+
 export const createAutomationOpSchema = z.object({
   op: z.literal('createAutomation'),
   surface: z.string().min(1),
@@ -104,6 +110,7 @@ export const operationSchema = z.discriminatedUnion('op', [
   updateFieldOpSchema,
   addRecordOpSchema,
   updateRecordOpSchema,
+  pinSurfaceOpSchema,
   createAutomationOpSchema,
   draftActionOpSchema,
   answerOpSchema,
@@ -135,6 +142,7 @@ export type InverseOperation =
   | { op: 'restoreRecord'; record: SurfaceRecord }
   | { op: 'restoreRecordValues'; recordId: string; values: z.infer<typeof recordValuesSchema> }
   | { op: 'restoreSurfaceFields'; surfaceId: string; fields: Surface['fields'] }
+  | { op: 'restorePinned'; surfaceId: string; pinned: boolean }
   | { op: 'deleteAutomation'; automationId: string }
   // for answer/draftAction entries: nothing to undo
   | { op: 'none' };

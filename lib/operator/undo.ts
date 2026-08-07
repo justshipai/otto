@@ -70,6 +70,15 @@ async function applyInverse(store: Store, inverse: InverseOperation, now: string
         inverse: { op: 'restoreSurfaceFields', surfaceId: inverse.surfaceId, fields: surface.fields },
       };
     }
+    case 'restorePinned': {
+      const surface = await store.getSurface(inverse.surfaceId);
+      if (!surface) return undefined;
+      await store.updateSurface(inverse.surfaceId, { pinned: inverse.pinned, updatedAt: now });
+      return {
+        summary: `${inverse.pinned ? 'Re-pinned' : 'Unpinned'} "${surface.title}"`,
+        inverse: { op: 'restorePinned', surfaceId: inverse.surfaceId, pinned: surface.pinned },
+      };
+    }
     case 'deleteAutomation': {
       await store.deleteAutomation(inverse.automationId);
       return { summary: 'Removed an automation', inverse: { op: 'none' } };

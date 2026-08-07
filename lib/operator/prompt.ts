@@ -21,6 +21,7 @@ function snapshot(workspace: WorkspaceSurface[]): string {
       id: surface.id,
       title: surface.title,
       viewType: surface.viewType,
+      pinned: surface.pinned,
       fields: surface.fields,
       recordCount: records.length,
       records: records.slice(0, MAX_RECORDS_PER_SURFACE).map((r) => ({ id: r.id, values: r.values })),

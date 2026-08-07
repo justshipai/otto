@@ -87,6 +87,21 @@ describe('undo and approved drafts', () => {
     expect(await store.listRecords(surface.id)).toHaveLength(2);
   });
 
+  it('applies and undoes pinSurface like any other operation', async () => {
+    await runOperator(store, cannedProvider(CREATE_BATCH), 'track my job search');
+    const [surface] = await store.listSurfaces();
+    expect(surface.pinned).toBe(false);
+
+    const { applyOperations } = await import('@/lib/operator/apply');
+    const batchId = 'pin-batch';
+    const result = await applyOperations(store, [{ op: 'pinSurface', surface: surface.id, pinned: true }], batchId);
+    expect(result.appliedCount).toBe(1);
+    expect((await store.getSurface(surface.id))?.pinned).toBe(true);
+
+    await undoBatch(store, batchId);
+    expect((await store.getSurface(surface.id))?.pinned).toBe(false);
+  });
+
   it('migrates pre-batch change logs so each legacy entry is its own batch', async () => {
     // build a database with the old change_log shape (no batch_id)
     const legacyPath = path.join(dir, 'legacy.db');

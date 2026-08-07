@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import PinToggle from '@/components/interactive/PinToggle';
 import SurfaceView from '@/components/surface-views/SurfaceView';
 import { getStore } from '@/lib/store';
 
@@ -24,11 +25,7 @@ export default async function SurfacePage({ params }: PageProps<'/surface/[id]'>
           {surface.icon}
         </span>
         <h1 className="text-2xl font-bold tracking-tight">{surface.title}</h1>
-        {surface.pinned && (
-          <span className="text-faint" title="Pinned" aria-label="Pinned">
-            ★
-          </span>
-        )}
+        <PinToggle surfaceId={surface.id} pinned={surface.pinned} />
       </div>
       <SurfaceView surface={surface} records={records} />
       <p className="pt-4 text-xs text-faint">

@@ -1,4 +1,5 @@
 import StatusPill from '@/components/surface-views/StatusPill';
+import StatusSelect from '@/components/interactive/StatusSelect';
 import { formatFieldValue, primaryField, statusField } from '@/lib/format';
 import type { Surface, SurfaceRecord } from '@/lib/core/types';
 
@@ -31,7 +32,16 @@ export default function ListView({ surface, records }: { surface: Surface; recor
                 </p>
               )}
             </div>
-            {pillValue !== null && pillValue !== undefined && <StatusPill label={String(pillValue)} />}
+            {pillField?.options?.length ? (
+              <StatusSelect
+                recordId={record.id}
+                fieldKey={pillField.key}
+                value={pillValue === null || pillValue === undefined ? null : String(pillValue)}
+                options={pillField.options}
+              />
+            ) : (
+              pillValue !== null && pillValue !== undefined && <StatusPill label={String(pillValue)} />
+            )}
           </div>
         );
       })}

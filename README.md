@@ -48,6 +48,8 @@ Trust comes from *visibility and undo*, not from inspecting anything.
 
 Five generic entities, defined in [`lib/core/types.ts`](lib/core/types.ts): **Surface** (title, icon, view type, fields), **Field**, **Record**, **Automation**, and the **ChangeLog**. A job-search board and an invoice tracker are the same thing with different fields — Otto has no per-vertical tables and never will.
 
+Surfaces are interactive in their own right — tap a status to change it (or move a board card), click into a table cell to edit it, pin a surface. Talking is for reshaping *structure*; day-to-day edits are direct. Both paths emit the **same validated operations** into the same undoable change log — one write path whether the actor is the model or your finger (`app/api/apply/route.ts`).
+
 ## Run it
 
 You need [Node.js](https://nodejs.org) 20 or newer.

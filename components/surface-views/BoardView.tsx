@@ -1,4 +1,5 @@
 import StatusPill from '@/components/surface-views/StatusPill';
+import StatusSelect from '@/components/interactive/StatusSelect';
 import { formatFieldValue, primaryField, statusField } from '@/lib/format';
 import type { Surface, SurfaceRecord } from '@/lib/core/types';
 import TableView from '@/components/surface-views/TableView';
@@ -51,6 +52,20 @@ export default function BoardView({ surface, records }: { surface: Surface; reco
                         </p>
                       );
                     })}
+                    {/* tap to move the card to another column */}
+                    <div className="mt-2">
+                      <StatusSelect
+                        recordId={record.id}
+                        fieldKey={groupField.key}
+                        value={
+                          record.values[groupField.key] === null ||
+                          record.values[groupField.key] === undefined
+                            ? null
+                            : String(record.values[groupField.key])
+                        }
+                        options={groupField.options ?? []}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
