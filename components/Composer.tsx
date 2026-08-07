@@ -7,18 +7,34 @@ import { useState } from 'react';
 interface OperatorResponse {
   reply?: string;
   createdSurfaceIds?: string[];
+  operations?: unknown[];
   error?: string;
 }
+
+interface HistoryTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+// 6 exchanges of context; older turns fall off the front
+const MAX_HISTORY_TURNS = 12;
 
 /**
  * The persistent "Summon" composer — Otto's main input. Describing a need
  * here reshapes the app in place: the message goes to the operator, the
  * reply is shown, and the pages re-read fresh data.
+ *
+ * It also carries the conversation: recent turns are kept here (the
+ * composer stays mounted across navigation) and sent with each request, so
+ * "add one more" means something. Assistant turns are stored as the
+ * validated operations JSON — context for the model AND a format anchor
+ * for smaller ones. A full page reload starts a fresh conversation.
  */
 export default function Composer() {
   const router = useRouter();
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
+  const [history, setHistory] = useState<HistoryTurn[]>([]);
   const [note, setNote] = useState<{ kind: 'reply' | 'error'; text: string } | undefined>();
 
   async function submit(e: React.FormEvent) {
@@ -33,13 +49,23 @@ export default function Composer() {
       const res = await fetch('/api/operator', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, history }),
       });
       const data: OperatorResponse = await res.json();
       if (!res.ok || data.error) {
         setNote({ kind: 'error', text: data.error ?? 'Something went wrong.' });
         return;
       }
+      setHistory((prev) =>
+        [
+          ...prev,
+          { role: 'user' as const, content: message },
+          {
+            role: 'assistant' as const,
+            content: JSON.stringify(data.operations ?? [{ op: 'answer', text: data.reply ?? 'Done.' }]),
+          },
+        ].slice(-MAX_HISTORY_TURNS),
+      );
       setNote({ kind: 'reply', text: data.reply ?? 'Done.' });
       setValue('');
       const created = data.createdSurfaceIds?.[0];

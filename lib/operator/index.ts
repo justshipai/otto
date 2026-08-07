@@ -1,8 +1,8 @@
-import { operationListJsonSchema } from '@/lib/core/operations';
+import { operationListJsonSchema, type Operation } from '@/lib/core/operations';
 import { requestOperations } from '@/lib/llm/validate';
 import { applyOperations } from '@/lib/operator/apply';
 import { buildSystemPrompt, type WorkspaceSurface } from '@/lib/operator/prompt';
-import type { LLMProvider } from '@/lib/llm/provider';
+import type { LLMMessage, LLMProvider } from '@/lib/llm/provider';
 import type { Store } from '@/lib/store/store';
 
 /**
@@ -16,6 +16,8 @@ export interface OperatorResult {
   reply: string;
   createdSurfaceIds: string[];
   appliedCount: number;
+  /** the validated operations, so the client can carry them as conversation history */
+  operations: Operation[];
   /** true when the model couldn't produce valid operations and we fell back to asking the user to rephrase */
   fallback: boolean;
 }
@@ -24,6 +26,7 @@ export async function runOperator(
   store: Store,
   provider: LLMProvider,
   userMessage: string,
+  history: LLMMessage[] = [],
 ): Promise<OperatorResult> {
   const surfaces = await store.listSurfaces();
   const workspace: WorkspaceSurface[] = await Promise.all(
@@ -32,7 +35,9 @@ export async function runOperator(
 
   const { operations, fallback } = await requestOperations(provider, {
     system: buildSystemPrompt(workspace, new Date().toISOString().slice(0, 10)),
-    messages: [{ role: 'user', content: userMessage }],
+    // prior turns give the model conversational memory ("add one more",
+    // "actually make it a board"); the workspace snapshot alone can't
+    messages: [...history, { role: 'user', content: userMessage }],
     operationsJsonSchema: operationListJsonSchema(),
   });
 
@@ -47,6 +52,7 @@ export async function runOperator(
     reply: replyLines.join('\n') || 'Done.',
     createdSurfaceIds: applied.createdSurfaceIds,
     appliedCount: applied.appliedCount,
+    operations,
     fallback,
   };
 }

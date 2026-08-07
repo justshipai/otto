@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runOperator } from '@/lib/operator';
 import { SqliteStore } from '@/lib/store/sqlite';
-import type { LLMProvider } from '@/lib/llm/provider';
+import type { LLMProvider, LLMRequest } from '@/lib/llm/provider';
 import type { Store } from '@/lib/store/store';
 
 function cannedProvider(...responses: string[]): LLMProvider {
@@ -111,6 +111,28 @@ describe('runOperator', () => {
     expect(result.fallback).toBe(true);
     expect(result.reply).toContain('say it a little differently');
     expect(await store.listSurfaces()).toHaveLength(0);
+  });
+
+  it('passes conversation history to the provider ahead of the new message', async () => {
+    const seen: LLMRequest[] = [];
+    const capturing: LLMProvider = {
+      name: 'capturing',
+      async complete(request) {
+        seen.push(request);
+        return JSON.stringify([{ op: 'answer', text: 'ok' }]);
+      },
+    };
+    const history = [
+      { role: 'user' as const, content: 'help me run my job search' },
+      { role: 'assistant' as const, content: '[{"op":"createSurface","title":"Job search", ...}]' },
+    ];
+
+    await runOperator(store, capturing, 'add Vercel to it', history);
+
+    expect(seen[0].messages).toHaveLength(3);
+    expect(seen[0].messages[0]).toEqual(history[0]);
+    expect(seen[0].messages[1]).toEqual(history[1]);
+    expect(seen[0].messages[2]).toEqual({ role: 'user', content: 'add Vercel to it' });
   });
 
   it('holds draftAction for approval instead of applying it', async () => {
