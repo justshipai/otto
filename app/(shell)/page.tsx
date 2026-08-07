@@ -47,7 +47,7 @@ export default async function Home() {
           <div className="flex flex-col gap-3">
             {attention.map((item) => (
               <div
-                key={item.surface.id}
+                key={item.automation.id}
                 className="flex items-center justify-between gap-4 rounded-2xl border border-attention-line bg-attention-bg px-4 py-3"
               >
                 <p className="text-sm font-medium text-attention-ink">{item.message}</p>

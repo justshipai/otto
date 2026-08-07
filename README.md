@@ -113,7 +113,7 @@ Search goes through the third extension point, `SearchProvider` ([`lib/search/pr
 - [ ] **M5** — reliability pass across multiple providers, incl. local models
 - [x] **M6** — trust layer: approvals, undo, version history
 - [x] **M6.5** — research: constrained web-search loop (off by default, `SearchProvider` extension point) + long-form `doc` surfaces
-- [ ] **M7** — automations + proactive "needs attention"
+- [x] **M7** — automations + proactive "needs attention"
 - [ ] **M8** — first-run experience
 
 Not planned in this repo: code generation (see above), hosted multi-user service, auth, plugin marketplace, real email/SMS sending (outbound actions are stubbed behind an interface a contributor can implement).

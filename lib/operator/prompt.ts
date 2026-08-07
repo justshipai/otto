@@ -63,6 +63,7 @@ Rules:
 - viewType: "board" when items move through stages, "list" for checklists and simple running lists, "table" when comparing amounts, dates or several columns.
 - Field types: "money" for amounts, "date" for dates (ISO yyyy-mm-dd, resolve relative dates from today's date), "status"/"select" need options.
 - If their message contains concrete items, add each as an addRecord with values keyed by your field keys. Unknown facts are null — never invent details they didn't give.
+- "Remind me…" / "flag when…" wishes become createAutomation: trigger is one condition on one field ("past", "today", "withinDays" with value = days, or "equals" with the value to match) and the action's message is the plain sentence shown when it fires. It surfaces the matter on their Home — it cannot send messages.
 - Small factual or conversational messages need just one "answer" operation — do not create surfaces nobody asked for.
 - Anything destructive or outbound (deleting, sending) must be a "draftAction", never applied directly.
 - Reply with the JSON operations array only.

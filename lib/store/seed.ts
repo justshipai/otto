@@ -1,4 +1,4 @@
-import type { Field, Surface, SurfaceRecord, ViewType } from '@/lib/core/types';
+import type { Automation, Field, Surface, SurfaceRecord, ViewType } from '@/lib/core/types';
 import type { Store } from '@/lib/store/store';
 
 /**
@@ -19,6 +19,7 @@ interface SeedSurface {
   narration: string;
   fields: Field[];
   rows: SurfaceRecord['values'][];
+  automation?: Pick<Automation, 'kind' | 'trigger' | 'action'>;
 }
 
 function daysFromNow(days: number): string {
@@ -45,9 +46,16 @@ const SEED: SeedSurface[] = [
       { client: 'Harbour & Finch', project: 'Brand refresh', amount: 3200, due: daysFromNow(-12), status: 'Overdue' },
       { client: 'Maple Yoga Studio', project: 'Class booking site', amount: 1850, due: daysFromNow(9), status: 'Sent' },
       { client: 'Oro Coffee Roasters', project: 'Packaging photos', amount: 740, due: daysFromNow(21), status: 'Sent' },
-      { client: 'Fieldnote Films', project: 'Showreel edit', amount: 2400, due: daysFromNow(-3), status: 'Paid' },
+      // paid early, so its due date sits in the future and only genuinely
+      // overdue invoices trip the seeded watch below
+      { client: 'Fieldnote Films', project: 'Showreel edit', amount: 2400, due: daysFromNow(3), status: 'Paid' },
       { client: 'Bright & Early Bakery', project: 'Menu redesign', amount: 980, due: daysFromNow(30), status: 'Draft' },
     ],
+    automation: {
+      kind: 'watch',
+      trigger: { fieldKey: 'due', condition: 'past' },
+      action: { kind: 'notify', message: 'An invoice is past due — time to chase it.' },
+    },
   },
   {
     title: 'Content plan',
@@ -118,6 +126,18 @@ export async function seedIfEmpty(store: Store): Promise<void> {
         id: crypto.randomUUID(),
         surfaceId: surface.id,
         values,
+        createdAt: iso,
+        updatedAt: iso,
+      });
+    }
+    if (seed.automation) {
+      await store.createAutomation({
+        id: crypto.randomUUID(),
+        surfaceId: surface.id,
+        kind: seed.automation.kind,
+        trigger: seed.automation.trigger,
+        action: seed.automation.action,
+        enabled: true,
         createdAt: iso,
         updatedAt: iso,
       });

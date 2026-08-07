@@ -215,7 +215,7 @@ export async function applyOperations(
           updatedAt: now,
         };
         await store.createAutomation(automation);
-        result.replyParts.push(`Saved a ${op.kind} on "${surface.title}" — it starts checking in an upcoming update.`);
+        result.replyParts.push(`Saved a ${op.kind} on "${surface.title}" — it'll appear under Needs attention when it triggers.`);
         await log(`Saved a ${op.kind} on "${surface.title}"`, op, {
           op: 'deleteAutomation',
           automationId: automation.id,
