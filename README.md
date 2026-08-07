@@ -93,7 +93,7 @@ Same idea: the app only talks to the `Store` interface in [`lib/store/store.ts`]
 - [x] **M1** — data model, `Store` interface + SQLite adapter, seeded demo surface
 - [x] **M2** — `LLMProvider` interface, Anthropic + OpenAI-compatible adapters, Settings
 - [x] **M3** — real renderer (table / board / list), Home + Library navigation
-- [ ] **M4** — the operator: natural language → surfaces, end to end
+- [x] **M4** — the operator: natural language → surfaces, end to end
 - [ ] **M5** — reliability pass across multiple providers, incl. local models
 - [ ] **M6** — trust layer: approvals, undo, version history
 - [ ] **M7** — automations + proactive "needs attention"
